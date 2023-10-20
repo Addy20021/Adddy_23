@@ -1,11 +1,10 @@
 import openai
 import re
-from gradio.components import Textbox, HTML
+from gradio.components import Textbox
 from gradio import Interface
 
 # Set up OpenAI API credentials
-openai.api_key = "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"
-
+openai.api_key = "****************************************************"
 questions = [
     [
         "History of {} programming language",
@@ -32,11 +31,13 @@ infoQuestions = [
     "Resources to learn {}: ",
 ]
 
-def generate_response(text):
+conversation_history = []
+
+def generate_chatbot_response(input_text):
     response = openai.Completion.create(
         engine="text-davinci-003",
-        prompt=text,
-        max_tokens=400,  # Increase the max_tokens value to get a longer response
+        prompt=input_text,
+        max_tokens=200,  # Increase the max_tokens value to get a longer response
         temperature=0.7,
         top_p=1.0,
         n=1,
@@ -46,43 +47,45 @@ def generate_response(text):
     )
     return response.choices[0].text.strip()
 
-def chatbot_interface(language):
+def chat_with_programming_language_bot(language):
     if language:
         language = language.lower()
         question = "Is {} a programming language? Reply True or False"
-        if bool(generate_response(question.format(language))):
-            responses = ""
-            i = -1
+        if bool(generate_chatbot_response(question.format(language))):
+            responses = []
             for question in questions:
-                i += 1
                 if type(question) == list:
-                    responses += f'<p style="font-size: 20px; font-weight: bold;">{infoQuestions[i].format(language)}</p><br>'
+                    info_responses = []
                     for q in question:
-                        res = re.sub(r"\n", "<br>", generate_response(q.format(language)))
-                        responses += f'{res}<br><br>'
+                        res = re.sub(r"\n", "\n", generate_chatbot_response(q.format(language)))
+                        info_responses.append(res)
+                    responses.append(info_responses)
                 else:
-                    res = re.sub(r"\n", "<br>", generate_response(question.format(language)))
-                    responses += f'<p style="font-size: 20px; font-weight: bold;">{infoQuestions[i].format(question)}</p><br>{res}<br><br>'
+                    res = re.sub(r"\n", "\n", generate_chatbot_response(question.format(language)))
+                    responses.append(res)
+            conversation_history.append((language, responses))
             return responses
         else:
-            rs = re.sub(r"\n", "<br>", generate_response(f"What is {language}?"))
-            responses = f'The provided input is not a programming language.<br><p style="font-size: 20px; font-weight: bold;">What is {language}</p><br>{rs}'
-            return responses
+            rs = re.sub(r"\n", "\n", generate_chatbot_response(f"What is {language}?"))
+            conversation_history.append((language, rs))
+            return rs
     else:
         return "Please enter the name of a programming language."
 
 # Create a Gradio Component
-inputs = Textbox(lines=2, label="Chat with AI")
-outputs = HTML(label="Reply")
+inputs = Textbox(lines=4, label="Chat with AI")
+outputs = Textbox(lines=20, label="Reply")  # Use Textbox to display plain text responses
+
 # Create a Gradio interface
 chat_interface = Interface(
-    fn=chatbot_interface,
+    fn=chat_with_programming_language_bot,
     inputs=inputs, 
     outputs=outputs, 
-    title="Programming Language Chatbot",
-    description="Enter the name of a programming language.",
-    theme="default"
+    title=" Chatbot",
+    description=" programming language.",
+    theme="dark"
 )
 
 chat_interface.queue()
 chat_interface.launch(inline=True, share=True)
+chat_interface.launch(inline=True, share=True, debug=True)
