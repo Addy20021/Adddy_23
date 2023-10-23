@@ -1,41 +1,35 @@
-import os
+import openai
 import requests
 import gradio as gr
+openai.api_key = 'nv2-uJsdUSG01wRCUGpn9VyO_NOVA_v2_WzILCU3y6C8OoGpR91O7'
 
-PALM_AI_API_KEY = "AIzaSyAMkX00XLrnN9vTz4aL4iqr0GeRziaBrT4"
+URL = "https://api.nova-oss.com/v1/chat/completions"
 
-def palm_ai_create(prompt):
-    endpoint = "https://api.palm-ai.com/v1/completions"
+def reply(message,temp):
+    payload = {
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": message}],
+        "temperature": temp,
+        "top_p": 1.0,
+        "n": 1,
+        "stream": False,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+    }
+
     headers = {
-        "Authorization": f"Bearer {PALM_AI_API_KEY}"
-    }
-    data = {
-        "text": prompt, 
-        "max_length": 150  # Adjust the length as needed
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {openai.api_key}"
     }
 
-    response = requests.post(endpoint, json=data, headers=headers)
-    
-    if response.status_code == 200:
-        return response.json().get("choices")[0].get("text")
-    else:
-        return "Palm AI API request failed."
+    response = requests.post(URL, headers=headers, json=payload, stream=False)
 
-def chat_with_palm_ai(input, history):
-    history = history or []
-    history.append(("Human:", input))
-    combined_text = "\n".join([f"{role} {text}" for role, text in history])
-    output = palm_ai_create(combined_text)
-    return history, output
+    return response.json()["choices"][0]["message"]["content"]
 
-block = gr.Blocks()
-
-with block:
-    gr.Markdown("""<h1><center>Build a Chatbot with Palm AI and Gradio</center></h1>""")
-    chatbot = gr.Chatbot()
-    message = gr.Textbox(placeholder="Type your message here...")
-    state = gr.State()
-    submit = gr.Button("SEND")
-    submit.click(chat_with_palm_ai, inputs=[message, state], outputs=[chatbot, state])
-
-block.launch(debug=True)
+# while True:
+#     call_reply = str(input("User: "))
+#     response = reply(call_reply)
+#     print("AI:", response)
+# demo= gr.Interface(fn=reply,inputs = ["text",gr.inputs.Number("temperature")],outputs = "text",title = "ai in education")
+demo = gr.Interface(fn=reply, inputs=["text", gr.inputs.Slider(0, 1, label = "temp")],outputs="text", title="AI")
+demo.launch()
